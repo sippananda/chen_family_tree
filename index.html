@@ -1,0 +1,365 @@
+<title>華美陳氏世系圖</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap">
+<style>
+/* Layout: toolbar on top; tree canvas (scrolls, zooms) beside a reading panel; panel drops below on phones. */
+:root {
+  --bg: #ffffff;
+  --fg: #141414;
+  --muted: #666a70;
+  --rule: #d9dce0;
+  --line: #9a9ea4;
+  --direct: #1f3f66;      /* 本支直系 fill */
+  --direct-ink: #0d0d0d;  /* 直系 outline and connector */
+  --unsure: #cfdbe8;
+  --hit: #ffe27a;         /* search highlight, light band behind name */
+  --panel: #f6f7f8;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171a; --fg: #ececec; --muted: #a0a5ab; --rule: #33373c; --line: #6c7178;
+  --direct: #8fb3dc; --direct-ink: #f2f2f2; --unsure: #3a4a5c; --hit: #6b5a12; --panel: #1d2024; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171a; --fg: #ececec; --muted: #a0a5ab; --rule: #33373c; --line: #6c7178;
+  --direct: #8fb3dc; --direct-ink: #f2f2f2; --unsure: #3a4a5c; --hit: #6b5a12; --panel: #1d2024; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px; box-sizing: border-box; }
+h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 10px; }
+.bar input[type=search] { font: inherit; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--bg); color: var(--fg); min-width: 0; width: 200px; }
+.bar button { font: inherit; font-size: 14px; padding: 6px 12px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--bg); color: var(--fg); cursor: pointer; }
+.bar button:hover { border-color: var(--line); }
+.bar button:focus-visible, .bar input:focus-visible { outline: 2px solid var(--direct); outline-offset: 1px; }
+.bar .zoom { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; min-width: 44px; text-align: center; }
+.bar select, .bar input[type=color] { font: inherit; font-size: 14px; padding: 5px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.bar input[type=color] { width: 40px; height: 34px; padding: 2px; cursor: pointer; }
+.bar label { font-size: 13px; color: var(--muted); }
+.bar .count { color: var(--muted); font-size: 13px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.canvas { border: 1px solid var(--rule); border-radius: 8px; overflow: auto; max-height: calc(100vh - 170px); min-height: 420px; }
+.canvas svg { display: block; }
+.panel { background: color-mix(in srgb, var(--bg) 93%, var(--fg) 7%); border-radius: 8px; padding: 16px; min-width: 0; font-size: 14px; }
+.panel h2 { font-size: 18px; margin: 0 0 4px; }
+.panel h3 { font-size: 14px; margin: 16px 0 6px; }
+.panel p { margin: 0 0 8px; }
+.panel .meta { color: var(--muted); font-size: 13px; }
+.panel ol, .panel ul { margin: 0; padding-left: 20px; }
+.panel li { margin: 2px 0; }
+.panel a { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.panel .back { font-size: 13px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; font-size: 13px; color: var(--fg); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 26px; height: 18px; border-radius: 4px; box-sizing: border-box; display: inline-block; }
+.sw.direct { background: var(--direct); border: 2px solid var(--direct-ink); }
+.sw.unsure { background: var(--unsure); border: 2px dashed var(--direct-ink); }
+.sw.branch { background: var(--bg); border: 1.5px solid var(--line); }
+.ln { width: 30px; height: 0; border-top: 3px solid var(--direct-ink); display: inline-block; }
+.ln.dash { border-top-style: dashed; }
+/* SVG */
+.node { cursor: pointer; }
+.node .blk { stroke-width: 1.4; }
+.node.direct .blk { fill: var(--direct); stroke: var(--direct-ink); stroke-width: 2.2; }
+.node.unsure .blk { fill: var(--unsure); stroke: var(--direct-ink); stroke-width: 2; stroke-dasharray: 4 3; }
+.node.unsure:not(.direct) .blk { fill: var(--bg); }
+.node.branch .blk { fill: var(--bg); stroke: var(--line); }
+.node .nm { font-size: 15px; font-weight: 700; fill: var(--fg); }
+.node .dt { font-size: 12px; fill: var(--muted); }
+.node .hl { fill: var(--hit); }
+.node .sel { fill: none; stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.node:focus-visible { outline: none; }
+.node:focus-visible .sel { stroke-width: 2.5; }
+.tg { cursor: pointer; }
+.tg circle { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
+.tg text { font-size: 13px; fill: var(--fg); font-weight: 700; }
+.tg .n { font-size: 11px; fill: var(--muted); font-weight: 400; }
+.conn { fill: none; stroke: var(--line); stroke-width: 1.3; }
+.conn.direct { stroke: var(--direct-ink); stroke-width: 3; }
+.gap { fill: none; stroke: var(--direct-ink); stroke-width: 2.5; stroke-dasharray: 5 5; }
+.gapnote, .gen { font-size: 12.5px; fill: var(--muted); }
+.genline { stroke: var(--rule); stroke-width: 1; }
+@media (max-width: 760px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .canvas { max-height: 70vh; }
+  .bar input[type=search] { width: 150px; }
+}
+@media (prefers-reduced-motion: no-preference) { .canvas { scroll-behavior: smooth; } }
+</style>
+
+<header>
+  <h1>華美鄉陳氏族譜・世系圖</h1>
+  <p class="sub">廣東省潮陽縣貴嶼華美鄉 · 據馬来亞分譜第一頁 · 本頁收錄 <span id="total"></span> 人</p>
+</header>
+
+<div class="bar" role="toolbar" aria-label="工具列">
+  <input type="search" id="q" placeholder="搜尋名號，如 介叟" aria-label="搜尋名號">
+  <span class="count" id="hits"></span>
+  <button id="zout" aria-label="縮小">−</button>
+  <span class="zoom" id="zlab">100%</span>
+  <button id="zin" aria-label="放大">＋</button>
+  <button id="fit">適合畫面</button>
+  <button id="openall">全部展開</button>
+  <button id="direct">只看直系</button>
+  <label for="bgsel">背景</label>
+  <select id="bgsel">
+    <option value="system">跟隨系統</option>
+    <option value="#ffffff">白色</option>
+    <option value="#f4eedd">米黃（宣紙）</option>
+    <option value="#eceff1">淺灰</option>
+    <option value="#e8efe6">淺綠</option>
+    <option value="dark">深色</option>
+    <option value="custom">自訂顏色…</option>
+  </select>
+  <input type="color" id="bgpick" value="#f4eedd" aria-label="自訂背景顏色" hidden>
+</div>
+
+<div class="main">
+  <div class="canvas" id="canvas"></div>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</div>
+
+<div class="legend">
+  <span><i class="sw direct"></i>本支直系（序中稱「我」）</span>
+  <span><i class="sw unsure"></i>無從查考（虛線框）</span>
+  <span><i class="sw branch"></i>旁支</span>
+  <span><i class="ln"></i>直系傳承</span>
+  <span><i class="ln dash"></i>中間世代從略</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+/* ===== 世系資料：以後只需在這裡增加人物 =====
+   id: 唯一代號；gen: 世代；parent: 父親 id；direct: 本支直系；unsure: 名號待查 */
+const DATA = [
+  {id:"tongzhi", gen:1, name:"通直公", l1:"始祖", l2:"宋・莆田縣令", parent:"", direct:true,
+   note:"原籍福建莆田縣，任莆田縣縣令。宋朝時分枝來廣東，卜居潮陽貴嶼華美鄉。", src:"第一頁 第4–6行"},
+  {id:"guifeng", gen:8, name:"桂峯公", l1:"八世開枝", l2:"", parent:"tongzhi", direct:true,
+   note:"序文：「賁鸞七代屬零丁，至八世桂峯公開枝。」始祖以下七代人丁單薄，至八世桂峯公開枝，生三房頭。", src:"第一頁 第6–8行"},
+  {id:"qiaoyin", gen:9, name:"樵隱公", l1:"長房", l2:"", parent:"guifeng",
+   note:"桂峯公長房，號樵隱公。", src:"第一頁 第8行"},
+  {id:"songxuan", gen:9, name:"松軒公", l1:"二房", l2:"", parent:"guifeng",
+   note:"桂峯公二房，號松軒公。", src:"第一頁 第8行"},
+  {id:"meipu", gen:9, name:"梅圃公", l1:"三房", l2:"", parent:"guifeng", direct:true,
+   note:"桂峯公三房，號梅圃公。九世祖，生三子，又分三房頭。", src:"第一頁 第8–11行"},
+  {id:"chengjiang", gen:10, name:"澄江公", l1:"三房長", l2:"派孫稀微", parent:"meipu",
+   note:"梅圃公長房，俗稱三房長。派孫歷代稀微。", src:"第一頁 第11–14行"},
+  {id:"qingyin", gen:10, name:"清隱公", l1:"三房二", l2:"處士義民", parent:"meipu", direct:true,
+   note:"梅圃公二房，俗稱三房二。十世祖。處士義民、明誥封太君、義官職事郎。生四子。", src:"第一頁 第12、15–16行"},
+  {id:"pingyuan", gen:10, name:"平原公", l1:"三房三", l2:"派孫稀微", parent:"meipu",
+   note:"梅圃公三房，俗稱三房三。派孫歷代稀微。", src:"第一頁 第13–14行"},
+  {id:"tianshou", gen:11, name:"恬守公", l1:"長房", l2:"", parent:"qingyin", direct:true,
+   note:"清隱公長房。十一世祖，明誥贈太封君。生八子。", src:"第一頁 第16、22行"},
+  {id:"dongyuan", gen:11, name:"東園公", l1:"二房", l2:"明代遷東莞", parent:"qingyin",
+   note:"清隱公二房。明代遷居廣東東莞楓林鄉、前港鄉、後港鄉創祖。夾注「東園公之子，俗稱北科祖」，所指待查。", src:"第一頁 第16–21行"},
+  {id:"jingsu", gen:11, name:"靖素公", l1:"三房", l2:"明代遷東莞", parent:"qingyin",
+   note:"清隱公三房。明代遷居廣東東莞創祖。", src:"第一頁 第17–21行"},
+  {id:"degong", gen:11, name:"德恭公", l1:"四房", l2:"明代遷東莞", parent:"qingyin",
+   note:"清隱公四房。明代遷居廣東東莞創祖。", src:"第一頁 第17–21行"},
+  {id:"first5", gen:12, name:"長至五房", l1:"五位祖伯", l2:"無從查考", parent:"tianshou", unsure:true,
+   note:"恬守公長、二、三、四、五房。均無從查考，未知失嗣或遷居他鄉。", src:"第一頁 第22–24行"},
+  {id:"jiesou", gen:12, name:"介叟公", l1:"六房", l2:"庠生", parent:"tianshou", direct:true,
+   note:"恬守公六房。十二世祖，庠生。生三子。", src:"第一頁 第24、28行"},
+  {id:"peimian", gen:12, name:"佩勉公", l1:"七房", l2:"名汪・字世大", parent:"tianshou",
+   note:"恬守公七房。名汪，字世大，號佩勉公。生二子。其子以後無從考查。", src:"第一頁 第24–26行"},
+  {id:"jibin", gen:12, name:"吉賓公", l1:"八房", l2:"名澤・字世隆", parent:"tianshou",
+   note:"恬守公八房。名澤，字世隆，號吉賓公。俗稱後宿派（「宿」字待查）。", src:"第一頁 第26–27行"},
+  {id:"xiang", gen:13, name:"享……", l1:"長房", l2:"續下頁", parent:"jiesou",
+   note:"介叟公長房，名享……下文續下頁。", src:"第一頁 第28行"},
+  {id:"zhuya", gen:13, name:"竹涯", l1:"長子", l2:"", parent:"peimian",
+   note:"佩勉公長子，號竹涯。", src:"第一頁 第25行"},
+  {id:"yequan", gen:13, name:"野泉", l1:"次子", l2:"", parent:"peimian",
+   note:"佩勉公次子，號野泉。", src:"第一頁 第25–26行"},
+];
+const NOTES = [
+  "始祖以下七代人丁單薄，世系未詳。",
+  "八世桂峯公開枝，分出三房。",
+  "澄江、平原兩房，歷代派孫稀微。",
+  "東園、靖素、德恭三房，明代遷居東莞。",
+  "恬守公長至五房，無從查考。",
+  "十三世以下，續族譜下一頁。"
+];
+
+const CN = ["","一","二","三","四","五","六","七","八","九","十"];
+function genName(g){ if(g<=10) return CN[g]+"世"; if(g<20) return "十"+CN[g-10]+"世"; if(g===20) return "二十世";
+  if(g<30) return "廿"+CN[g-20]+"世"; if(g===30) return "三十世"; return g+"世"; }
+
+const byId = new Map(DATA.map(d => [d.id, {...d, kids: []}]));
+byId.forEach(d => { if (d.parent && byId.has(d.parent)) byId.get(d.parent).kids.push(d); });
+const roots = [...byId.values()].filter(d => !d.parent || !byId.has(d.parent));
+const fakeRoot = {id:"__root", kids: roots};
+document.getElementById("total").textContent = DATA.length;
+
+let collapsed = new Set();
+try { const s = JSON.parse(localStorage.getItem("hm-collapsed") || "[]"); collapsed = new Set(s.filter(id => byId.has(id))); } catch(e) {}
+const saveCollapsed = () => { try { localStorage.setItem("hm-collapsed", JSON.stringify([...collapsed])); } catch(e) {} };
+let selected = null, query = "", scale = 1;
+
+const SLOT = 170, ROW = 100, GAPROW = 60, LEFT = 86, TOP = 40, BW = 28, BH = 22;
+const canvas = document.getElementById("canvas");
+const ns = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(ns, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const countDesc = d => d.kids.reduce((n, k) => n + 1 + countDesc(k), 0);
+const matches = d => query && (d.name + d.l1 + d.l2 + (d.note || "")).includes(query);
+
+function draw() {
+  const h = d3.hierarchy(fakeRoot, d => (d.id === "__root" || !collapsed.has(d.id)) ? d.kids : null);
+  d3.tree().nodeSize([SLOT, 1]).separation(() => 1)(h);
+  const nodes = h.descendants().filter(n => n.data.id !== "__root");
+  const gens = [...new Set(nodes.map(n => n.data.gen))].sort((a, b) => a - b);
+  const gy = new Map(); let y = TOP + 20;
+  gens.forEach((g, i) => { if (i) y += (g - gens[i-1] > 1) ? ROW + GAPROW : ROW; gy.set(g, y); });
+  const minX = d3.min(nodes, n => n.x), maxX = d3.max(nodes, n => n.x);
+  const ox = LEFT + 30 - minX;
+  const W = maxX - minX + LEFT + 30 + 150, H = y + 70;
+  const X = n => n.x + ox, Y = n => gy.get(n.data.gen);
+
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, width: W * scale, height: H * scale,
+    role: "img", "aria-label": "華美鄉陳氏世系圖"});
+  svg.dataset.w = W; svg.dataset.h = H;
+  gens.forEach(g => { el("line", {class: "genline", x1: 0, x2: W, y1: gy.get(g) - 44, y2: gy.get(g) - 44}, svg);
+    el("text", {class: "gen", x: 10, y: gy.get(g) + 4}, svg).textContent = genName(g); });
+
+  const cg = el("g", {}, svg), dg = el("g", {}, svg);
+  nodes.forEach(p => {
+    if (!p.children) return;
+    const px = X(p), py0 = Y(p) + BH / 2;
+    const groups = p.children;
+    const gc = groups[0].data.gen, gp = p.data.gen;
+    if (gc - gp > 1) {
+      groups.forEach(c => {
+        el("path", {class: "gap", d: `M${px} ${py0}V${Y(c) - BH/2}`}, cg);
+        el("text", {class: "gapnote", x: px + 14, y: (py0 + Y(c)) / 2}, cg).textContent =
+          `一至${genName(gc - 1)}：七代人丁單薄（零丁）`;
+      });
+      return;
+    }
+    const bus = Y(groups[0]) - BH / 2 - 22;
+    const xs = groups.map(X);
+    el("path", {class: "conn", d: `M${px} ${py0 + 14}V${bus}M${Math.min(px, ...xs)} ${bus}H${Math.max(px, ...xs)}` +
+      xs.map(x => `M${x} ${bus}V${Y(groups[0]) - BH/2}`).join("")}, cg);
+    groups.forEach(c => { if (p.data.direct && c.data.direct)
+      el("path", {class: "conn direct", d: `M${px} ${py0}V${bus}H${X(c)}V${Y(c) - BH/2}`}, dg); });
+  });
+
+  nodes.forEach(n => {
+    const d = n.data, x = X(n), yy = Y(n);
+    const cls = ["node", d.direct ? "direct" : "branch", d.unsure ? "unsure" : ""].join(" ");
+    const g = el("g", {class: cls, tabindex: 0, role: "button", "aria-label": `${genName(d.gen)} ${d.name}`}, svg);
+    if (matches(d)) el("rect", {class: "hl", x: x + BW/2 + 6, y: yy - 16, width: d.name.length * 15 + 10, height: 22, rx: 3}, g);
+    if (selected === d.id) el("rect", {class: "sel", x: x - BW/2 - 6, y: yy - BH/2 - 6, width: 140, height: BH + 34, rx: 6}, g);
+    el("rect", {class: "blk", x: x - BW/2, y: yy - BH/2, width: BW, height: BH, rx: 4}, g);
+    el("text", {class: "nm", x: x + BW/2 + 10, y: yy + 0}, g).textContent = d.name;
+    if (d.l1) el("text", {class: "dt", x: x + BW/2 + 10, y: yy + 17}, g).textContent = d.l1;
+    if (d.l2) el("text", {class: "dt", x: x + BW/2 + 10, y: yy + 32}, g).textContent = d.l2;
+    const pick = () => { selected = d.id; draw(); showPerson(d.id); };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    if (d.kids.length) {
+      const t = el("g", {class: "tg", role: "button", tabindex: 0,
+        "aria-label": collapsed.has(d.id) ? `展開 ${d.name}` : `收起 ${d.name}`}, svg);
+      el("circle", {cx: x, cy: yy + BH/2 + 13, r: 8}, t);
+      el("text", {x: x, y: yy + BH/2 + 17.5, "text-anchor": "middle"}, t).textContent = collapsed.has(d.id) ? "+" : "−";
+      if (collapsed.has(d.id)) el("text", {class: "n", x: x - 12, y: yy + BH/2 + 17, "text-anchor": "end"}, t)
+        .textContent = `${countDesc(d)} 人`;
+      const flip = e => { e.stopPropagation(); collapsed.has(d.id) ? collapsed.delete(d.id) : collapsed.add(d.id); saveCollapsed(); draw(); };
+      t.addEventListener("click", flip);
+      t.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } });
+    }
+  });
+  canvas.replaceChildren(svg);
+  document.getElementById("zlab").textContent = Math.round(scale * 100) + "%";
+}
+
+function link(id) { const d = byId.get(id); return `<a data-id="${id}">${d.name}</a>`; }
+function showPerson(id) {
+  const d = byId.get(id), p = d.parent && byId.get(d.parent);
+  const kind = d.direct ? "本支直系" : "旁支";
+  document.getElementById("panel").innerHTML = `
+    <p class="back"><a id="home">← 返回總覽</a></p>
+    <h2>${d.name}</h2>
+    <p class="meta">${genName(d.gen)} · ${kind}${d.unsure ? " · 無從查考" : ""}</p>
+    ${[d.l1, d.l2].filter(Boolean).length ? `<p>${[d.l1, d.l2].filter(Boolean).join("・")}</p>` : ""}
+    ${d.note ? `<h3>記載</h3><p>${d.note}</p>` : ""}
+    ${p ? `<h3>父親</h3><p>${link(p.id)}</p>` : ""}
+    ${d.kids.length ? `<h3>子嗣（${d.kids.length}）</h3><ul>${d.kids.map(k => `<li>${link(k.id)}　<span class="meta">${k.l1 || ""}</span></li>`).join("")}</ul>` : ""}
+    ${d.src ? `<h3>出處</h3><p class="meta">${d.src}</p>` : ""}`;
+}
+function showHome() {
+  const line = DATA.filter(d => d.direct).sort((a, b) => a.gen - b.gen);
+  document.getElementById("panel").innerHTML = `
+    <h2>本支直系</h2>
+    <p class="meta">點擊圖中任何人，可看記載與出處。</p>
+    <ol>${line.map(d => `<li>${genName(d.gen)}　${link(d.id)}${d.unsure ? "（待查）" : ""}</li>`).join("")}</ol>
+    <h3>要點</h3>
+    <ul>${NOTES.map(n => `<li>${n}</li>`).join("")}</ul>`;
+}
+document.getElementById("panel").addEventListener("click", e => {
+  const a = e.target.closest("a"); if (!a) return;
+  if (a.id === "home") { selected = null; draw(); showHome(); return; }
+  const id = a.dataset.id; if (!id) return;
+  let q = byId.get(id); while (q && q.parent) { collapsed.delete(q.parent); q = byId.get(q.parent); }
+  selected = id; draw(); showPerson(id); scrollTo(id);
+});
+
+function scrollTo(id) {
+  requestAnimationFrame(() => {
+    const g = [...canvas.querySelectorAll(".node")].find(n => n.getAttribute("aria-label").endsWith(" " + byId.get(id).name));
+    if (!g) return;
+    const r = g.getBoundingClientRect(), c = canvas.getBoundingClientRect();
+    canvas.scrollLeft += r.left - c.left - c.width / 2 + 60;
+    canvas.scrollTop += r.top - c.top - c.height / 2;
+  });
+}
+
+const setScale = s => { scale = Math.max(0.3, Math.min(2.5, s)); draw(); };
+document.getElementById("zin").onclick = () => setScale(scale * 1.2);
+document.getElementById("zout").onclick = () => setScale(scale / 1.2);
+document.getElementById("fit").onclick = () => { draw(); const svg = canvas.querySelector("svg");
+  setScale(Math.min(1.2, (canvas.clientWidth - 4) / +svg.dataset.w)); };
+document.getElementById("openall").onclick = () => { collapsed.clear(); saveCollapsed(); draw(); };
+document.getElementById("direct").onclick = () => {
+  collapsed = new Set(); DATA.forEach(d => { if (!d.direct && byId.get(d.id).kids.length) collapsed.add(d.id); });
+  // 直系人物的旁支子嗣保留顯示，只收起旁支人物的後代
+  saveCollapsed(); draw(); };
+document.getElementById("q").addEventListener("input", e => {
+  query = e.target.value.trim();
+  const hits = query ? DATA.filter(matches) : [];
+  hits.forEach(h => { let q = byId.get(h.id); while (q && q.parent) { collapsed.delete(q.parent); q = byId.get(q.parent); } });
+  document.getElementById("hits").textContent = query ? `找到 ${hits.length} 人` : "";
+  draw(); if (hits.length) scrollTo(hits[0].id);
+});
+
+/* ===== 背景顏色 ===== */
+const rootEl = document.documentElement, hostTheme = rootEl.getAttribute("data-theme");
+const isDark = hex => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128; };
+function applyBg(v, custom) {
+  rootEl.style.removeProperty("--bg");
+  const pick = document.getElementById("bgpick");
+  pick.hidden = v !== "custom";
+  if (v === "system") { hostTheme ? rootEl.setAttribute("data-theme", hostTheme) : rootEl.removeAttribute("data-theme"); }
+  else if (v === "dark") { rootEl.setAttribute("data-theme", "dark"); }
+  else {
+    const hex = v === "custom" ? (custom || pick.value) : v;
+    rootEl.setAttribute("data-theme", isDark(hex) ? "dark" : "light");
+    rootEl.style.setProperty("--bg", hex);
+    if (v === "custom") pick.value = hex;
+  }
+  try { localStorage.setItem("hm-bg", JSON.stringify({v, c: document.getElementById("bgpick").value})); } catch(e) {}
+}
+document.getElementById("bgsel").addEventListener("change", e => applyBg(e.target.value));
+document.getElementById("bgpick").addEventListener("input", e => applyBg("custom", e.target.value));
+try { const b = JSON.parse(localStorage.getItem("hm-bg") || "null");
+  if (b && b.v) { document.getElementById("bgsel").value = b.v; if (b.c) document.getElementById("bgpick").value = b.c; applyBg(b.v, b.c); } } catch(e) {}
+
+draw(); showHome();
+requestAnimationFrame(() => { const svg = canvas.querySelector("svg");
+  const fit = (canvas.clientWidth - 4) / +svg.dataset.w; if (fit < 1) setScale(Math.max(0.6, fit)); });
+</script>
