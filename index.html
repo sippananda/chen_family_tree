@@ -89,6 +89,13 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 .tg circle { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
 .tg text { font-size: 13px; fill: var(--fg); font-weight: 700; }
 .tg .n { font-size: 11px; fill: var(--muted); font-weight: 400; }
+.stub { cursor: pointer; }
+.stub rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.3; stroke-dasharray: 2 3; }
+.stub text { font-size: 13px; fill: var(--fg); }
+.stub .sub2 { font-size: 11.5px; fill: var(--muted); }
+.stub:hover rect, .stub:focus-visible rect { stroke: var(--fg); }
+.stub:focus-visible { outline: none; }
+.bar button[aria-pressed="true"] { border-color: var(--fg); font-weight: 700; }
 .conn { fill: none; stroke: var(--line); stroke-width: 1.3; }
 .conn.direct { stroke: var(--direct-ink); stroke-width: 3; }
 .gap { fill: none; stroke: var(--direct-ink); stroke-width: 2.5; stroke-dasharray: 5 5; }
@@ -116,6 +123,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
   <span class="zoom" id="zlab">100%</span>
   <button id="zin" aria-label="放大">＋</button>
   <button id="fit">適合畫面</button>
+  <button id="compact" aria-pressed="true">精簡旁支：開</button>
   <button id="openall">全部展開</button>
   <button id="direct">只看直系</button>
   <label for="bgsel">背景</label>
@@ -338,6 +346,27 @@ let collapsed = new Set();
 try { const s = JSON.parse(localStorage.getItem("hm-collapsed") || "[]"); collapsed = new Set(s.filter(id => byId.has(id))); } catch(e) {}
 const saveCollapsed = () => { try { localStorage.setItem("hm-collapsed", JSON.stringify([...collapsed])); } catch(e) {} };
 let selected = null, query = "", scale = 1;
+/* 精簡旁支：同一父親子嗣超過 FOLD_MIN 人時，只顯示直系一人，其餘兄弟收成一個「另 N 位」 */
+const FOLD_MIN = 4;
+let compact = true, openFams = new Set();
+try { const c = JSON.parse(localStorage.getItem("hm-compact") || "null");
+  if (c) { compact = c.on !== false; openFams = new Set((c.open || []).filter(id => byId.has(id))); } } catch(e) {}
+const saveCompact = () => { try { localStorage.setItem("hm-compact", JSON.stringify({on: compact, open: [...openFams]})); } catch(e) {} };
+const foldable = d => d.kids.length >= FOLD_MIN && d.kids.some(k => k.direct);
+function visibleKids(d) {
+  if (!d.kids.length) return null;
+  if (!compact || !foldable(d)) return d.kids;
+  const hidden = d.kids.filter(k => !k.direct);
+  if (openFams.has(d.id)) return [...d.kids, {id: "fold-" + d.id, stub: "fold", gen: d.kids[0].gen, fam: d.id, count: hidden.length}];
+  return [...d.kids.filter(k => k.direct), {id: "stub-" + d.id, stub: "open", gen: d.kids[0].gen, fam: d.id, count: hidden.length,
+    names: hidden.map(k => k.name)}];
+}
+/* 讓某人可見：展開祖先，並打開他所在的兄弟組 */
+function reveal(id) {
+  let q = byId.get(id);
+  while (q && q.parent) { collapsed.delete(q.parent); if (!q.direct) openFams.add(q.parent); q = byId.get(q.parent); }
+  saveCollapsed(); saveCompact();
+}
 
 const SLOT = 170, ROW = 100, GAPROW = 60, LEFT = 86, TOP = 40, BW = 28, BH = 22;
 const canvas = document.getElementById("canvas");
@@ -348,7 +377,7 @@ const countDesc = d => d.kids.reduce((n, k) => n + 1 + countDesc(k), 0);
 const matches = d => query && (d.name + d.l1 + d.l2 + (d.note || "")).includes(query);
 
 function draw() {
-  const h = d3.hierarchy(fakeRoot, d => (d.id === "__root" || !collapsed.has(d.id)) ? d.kids : null);
+  const h = d3.hierarchy(fakeRoot, d => d.id === "__root" ? d.kids : (d.stub || collapsed.has(d.id)) ? null : visibleKids(d));
   d3.tree().nodeSize([SLOT, 1]).separation(() => 1)(h);
   const nodes = h.descendants().filter(n => n.data.id !== "__root");
   const gens = [...new Set(nodes.map(n => n.data.gen))].sort((a, b) => a - b);
@@ -389,6 +418,20 @@ function draw() {
 
   nodes.forEach(n => {
     const d = n.data, x = X(n), yy = Y(n);
+    if (d.stub) {
+      const open = d.stub === "open";
+      const fam = byId.get(d.fam);
+      const t = el("g", {class: "stub", role: "button", tabindex: 0,
+        "aria-label": open ? `顯示${fam.name}其餘 ${d.count} 位子嗣` : `收起${fam.name}其餘 ${d.count} 位子嗣`}, svg);
+      el("rect", {x: x - BW/2, y: yy - 15, width: 132, height: open ? 44 : 30, rx: 8}, t);
+      el("text", {x: x - BW/2 + 12, y: yy + 5}, t).textContent = open ? `＋ 另 ${d.count} 位兄弟` : `－ 收起 ${d.count} 位兄弟`;
+      if (open) el("text", {class: "sub2", x: x - BW/2 + 12, y: yy + 22}, t).textContent =
+        d.names.slice(0, 3).join("、") + (d.names.length > 3 ? "…" : "");
+      const act = () => { open ? openFams.add(d.fam) : openFams.delete(d.fam); saveCompact(); draw(); };
+      t.addEventListener("click", act);
+      t.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } });
+      return;
+    }
     const cls = ["node", d.direct ? "direct" : "branch", d.unsure ? "unsure" : ""].join(" ");
     const g = el("g", {class: cls, tabindex: 0, role: "button", "aria-label": `${genName(d.gen)} ${d.name}`}, svg);
     if (matches(d)) el("rect", {class: "hl", x: x + BW/2 + 6, y: yy - 16, width: d.name.length * 15 + 10, height: 22, rx: 3}, g);
@@ -445,7 +488,7 @@ function onLink(e) {
   if (e.target.closest("#home")) { selected = null; document.getElementById("panel").hidden = true; draw(); return; }
   const a = e.target.closest("a"); if (!a) return;
   const id = a.dataset.id; if (!id) return;
-  let q = byId.get(id); while (q && q.parent) { collapsed.delete(q.parent); q = byId.get(q.parent); }
+  reveal(id);
   selected = id; draw(); showPerson(id); scrollTo(id);
 }
 document.getElementById("panel").addEventListener("click", onLink);
@@ -467,15 +510,22 @@ document.getElementById("zin").onclick = () => setScale(scale * 1.2);
 document.getElementById("zout").onclick = () => setScale(scale / 1.2);
 document.getElementById("fit").onclick = () => { draw(); const svg = canvas.querySelector("svg");
   setScale(Math.min(1.2, (canvas.clientWidth - 4) / +svg.dataset.w)); };
-document.getElementById("openall").onclick = () => { collapsed.clear(); saveCollapsed(); draw(); };
+function setCompact(on) {
+  compact = on; if (on) openFams.clear();
+  const b = document.getElementById("compact");
+  b.setAttribute("aria-pressed", on ? "true" : "false"); b.textContent = on ? "精簡旁支：開" : "精簡旁支：關";
+  saveCompact();
+}
+document.getElementById("compact").onclick = () => { setCompact(!compact); draw(); };
+document.getElementById("openall").onclick = () => { collapsed.clear(); saveCollapsed(); setCompact(false); draw(); };
 document.getElementById("direct").onclick = () => {
   collapsed = new Set(); DATA.forEach(d => { if (!d.direct && byId.get(d.id).kids.length) collapsed.add(d.id); });
-  // 直系人物的旁支子嗣保留顯示，只收起旁支人物的後代
-  saveCollapsed(); draw(); };
+  // 收起旁支人物的後代，並把旁支兄弟收成「另 N 位」
+  saveCollapsed(); setCompact(true); draw(); };
 document.getElementById("q").addEventListener("input", e => {
   query = e.target.value.trim();
   const hits = query ? DATA.filter(matches) : [];
-  hits.forEach(h => { let q = byId.get(h.id); while (q && q.parent) { collapsed.delete(q.parent); q = byId.get(q.parent); } });
+  hits.forEach(h => reveal(h.id));
   document.getElementById("hits").textContent = query ? `找到 ${hits.length} 人` : "";
   draw(); if (hits.length) scrollTo(hits[0].id);
 });
@@ -503,6 +553,8 @@ document.getElementById("bgpick").addEventListener("input", e => applyBg("custom
 try { const b = JSON.parse(localStorage.getItem("hm-bg") || "null");
   if (b && b.v) { document.getElementById("bgsel").value = b.v; if (b.c) document.getElementById("bgpick").value = b.c; applyBg(b.v, b.c); } } catch(e) {}
 
+{ const b = document.getElementById("compact");
+  b.setAttribute("aria-pressed", compact ? "true" : "false"); b.textContent = compact ? "精簡旁支：開" : "精簡旁支：關"; }
 draw(); showHome();
 requestAnimationFrame(() => { const svg = canvas.querySelector("svg");
   const fit = (canvas.clientWidth - 4) / +svg.dataset.w; if (fit < 1) setScale(Math.max(0.6, fit)); });
