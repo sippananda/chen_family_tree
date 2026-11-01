@@ -148,7 +148,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 <div class="legend">
   <span><i class="sw direct"></i>本支直系（序中稱「我」）</span>
   <span><i class="sw unsure"></i>無從查考（虛線框）</span>
-  <span><i class="sw branch"></i>旁支</span>
+  <span><i class="sw branch"></i>旁支；平章公以下各房並列</span>
   <span><i class="ln"></i>直系傳承</span>
   <span><i class="ln dash"></i>中間世代從略</span>
 </div>
@@ -364,7 +364,7 @@ const DATA = [
   {id:"ziyun_2", gen:25, name:"孝順", l1:"二房・字世訓", l2:"書名開正", parent:"ziyun",
    note:"子雲公二房。名孝順，書名開正，字世訓。生二子。", src:"世系第五圖；世系圖（平章祖第四子派孫）"},
   {id:"ziyun_3", gen:25, name:"孝猛", l1:"三房・號璧洲", l2:"葬馬來西亞邦咯島", parent:"ziyun",
-   note:"子雲公三房。名孝猛，書名開士，字（族名）世勇，號璧洲。葬於馬來西亞邦咯島（Pulau Pangkor）。生四子。", src:"世系第五圖；世系圖（平章祖第四子派孫）；家人補充"},
+   note:"子雲公三房。名孝猛，書名開士，字（族名）世勇，號璧洲。葬於馬來西亞邦咯島（Pulau Pangkor）。生四子。", src:"世系第五圖；世系圖（平章祖第四子派孫）；家人補充；族親書信"},
   {id:"zibin_1", gen:25, name:"執淑", l1:"長房・號壁勳", l2:"字世亨", parent:"zibin",
    note:"子彬公長房。名執淑，字世亨，號壁勳，書名開貞。生五子。", src:"世系第五圖；世系第七圖（平章祖第五子派孫）"},
   {id:"zibin_2", gen:25, name:"庭錦", l1:"二房・號壁巖", l2:"字世階", parent:"zibin",
@@ -539,13 +539,14 @@ function draw() {
 function link(id) { const d = byId.get(id); return `<a data-id="${id}">${d.name}</a>`; }
 function showPerson(id) {
   const d = byId.get(id), p = d.parent && byId.get(d.parent);
-  const kind = d.direct ? "本支直系" : "旁支";
+  // 平章公（廿三世）以下各房並列，不標直系或旁支
+  const kind = d.gen > 23 ? "" : (d.direct ? "本支直系" : "旁支");
   const panel = document.getElementById("panel");
   panel.hidden = false;
   panel.innerHTML = `
     <button class="close" id="home" aria-label="關閉">×</button>
     <h2>${d.name}</h2>
-    <p class="meta">${genName(d.gen)} · ${kind}${d.unsure ? " · 無從查考" : ""}</p>
+    <p class="meta">${[genName(d.gen), kind, d.unsure ? "無從查考" : ""].filter(Boolean).join(" · ")}</p>
     ${[d.l1, d.l2].filter(Boolean).length ? `<p>${[d.l1, d.l2].filter(Boolean).join("・")}</p>` : ""}
     ${d.note ? `<h3>記載</h3><p>${d.note.replace(/【\/?私】/g, "").replace(/\n/g, "<br>")}</p>` : ""}
     ${p ? `<h3>父親</h3><p>${link(p.id)}</p>` : ""}
