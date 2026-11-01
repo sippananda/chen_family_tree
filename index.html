@@ -114,7 +114,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 
 <header>
   <h1>華美鄉陳氏族譜・世系圖</h1>
-  <p class="sub">廣東省潮陽縣貴嶼華美鄉 · 據馬来亞分譜序文及世系第一至五圖 · 現收錄 <span id="total"></span> 人</p>
+  <p class="sub">廣東省潮陽縣貴嶼華美鄉 · 據馬来亞分譜序文及世系第一至六圖 · 現收錄 <span id="total"></span> 人</p>
 </header>
 
 <div class="bar" role="toolbar" aria-label="工具列">
@@ -323,7 +323,7 @@ const DATA = [
    note:"端溪公三房。名豪。失嗣。", src:"第三頁 第10行；世系第五圖"},
   {id:"pingzhang", gen:23, name:"平章公", l1:"四房", l2:"修職郎", parent:"duanxi", direct:true,
    note:"端溪公四房。名初成，字昌信。廿三世祖，修職郎。生七子。自此六房頭甚多遷來馬來亞。", src:"第三頁 第10–16行；世系第五圖"},
-  {id:"ruohao", gen:24, name:"若豪公", l1:"長房", l2:"字光雄", parent:"pingzhang",
+  {id:"ruohao", gen:24, name:"若豪公", l1:"長房", l2:"字光雄", parent:"pingzhang", direct:true,
    note:"平章公長房，號若豪公。名文俊，字光雄，書名德□（待核）。", src:"第三頁 第12–13行；世系第五圖"},
   {id:"ziying", gen:24, name:"子英公", l1:"二房", l2:"字光達", parent:"pingzhang",
    note:"平章公二房，號子英公。名文知，字光達，書名德尊。", src:"第三頁 第13行；世系第五圖"},
@@ -337,12 +337,12 @@ const DATA = [
    note:"平章公六房。名文臣，字光國，書名德□（待核）。", src:"第三頁 第14行；世系第五圖"},
   {id:"shizhai", gen:24, name:"石斋公", l1:"七房", l2:"字光聲・失嗣待核", parent:"pingzhang",
    note:"平章公七房，號石斋公，名文耀，字光聲，書名德□（待核）。序文說失嗣，但世系圖列有一子，待核。", src:"第三頁 第14–15行；世系第五圖"},
-  {id:"ruohao_1", gen:25, name:"朝宗", l1:"一子", l2:"", parent:"ruohao",
-   note:"若豪公第一子，名朝宗。", src:"世系第五圖"},
-  {id:"ruohao_2", gen:25, name:"朝陽", l1:"二子", l2:"", parent:"ruohao",
-   note:"若豪公第二子，名朝陽。", src:"世系第五圖"},
-  {id:"ruohao_3", gen:25, name:"朝霸", l1:"三子", l2:"", parent:"ruohao",
-   note:"若豪公第三子，名朝霸。", src:"世系第五圖"},
+  {id:"ruohao_1", gen:25, name:"義忠公", l1:"長房・名朝宗", l2:"書名開仁", parent:"ruohao",
+   note:"若豪公長房。名朝宗，號義忠公，書名開仁。", src:"世系第五圖；世系第六圖"},
+  {id:"ruohao_2", gen:25, name:"義鳴公", l1:"二房・名朝陽", l2:"書名開儀", parent:"ruohao", direct:true,
+   note:"若豪公二房。名朝陽，號義鳴公，書名開儀。生二子；廿六世以後未公開。", src:"世系第五圖；世系第六圖"},
+  {id:"ruohao_3", gen:25, name:"義正公", l1:"三房・名朝霸", l2:"書名開尉", parent:"ruohao",
+   note:"若豪公三房。名朝霸，號義正公，書名開尉（待核）。", src:"世系第五圖；世系第六圖"},
   {id:"ziying_1", gen:25, name:"仕任", l1:"一子", l2:"", parent:"ziying",
    note:"子英公第一子，名仕任。", src:"世系第五圖"},
   {id:"ziying_2", gen:25, name:"仕堅", l1:"二子", l2:"", parent:"ziying",
@@ -361,10 +361,8 @@ const DATA = [
    note:"子雲公第一子，名孝儀。", src:"世系第五圖"},
   {id:"ziyun_2", gen:25, name:"孝順", l1:"二子", l2:"", parent:"ziyun",
    note:"子雲公第二子，名孝順。", src:"世系第五圖"},
-  {id:"ziyun_3", gen:25, name:"孝猛", l1:"三子・號璧洲", l2:"葬邦咯島", parent:"ziyun",
-   note:"子雲公第三子。名孝猛，書名開士，族名世勇，號璧洲。葬於邦咯島（Pulau Pangkor）。子沐隆。", src:"世系第五圖；家人補充"},
-  {id:"mulong", gen:26, name:"沐隆", l1:"孝猛之子", l2:"", parent:"ziyun_3",
-   note:"廿五世孝猛（璧洲）之子。", src:"家人補充"},
+  {id:"ziyun_3", gen:25, name:"孝猛", l1:"三子・號璧洲", l2:"葬馬來西亞邦咯島", parent:"ziyun",
+   note:"子雲公第三子。名孝猛，書名開士，族名世勇，號璧洲。葬於馬來西亞邦咯島（Pulau Pangkor）。", src:"世系第五圖；家人補充"},
   {id:"zibin_1", gen:25, name:"執淑", l1:"一子", l2:"", parent:"zibin",
    note:"子彬公第一子，名執淑。", src:"世系第五圖"},
   {id:"zibin_2", gen:25, name:"庭錦", l1:"二子", l2:"", parent:"zibin",
@@ -398,7 +396,7 @@ const NOTES = [
   "九世松軒公一派遷居金甌鄉；另有派孫遷居東山及澄海冠隴鄉。",
   "明末清初，族人多漂泊暹羅、安南，馬來亞次之。",
   "在馬來亞，九世三房皆有後人：梅圃公派孫頗多，樵隱公派孫較少，松軒公派亦在此。",
-  "廿五世以後各房，詳見族譜後段，待轉錄。"
+  "其他各房廿五世以後，詳見族譜後段，待轉錄。"
 ];
 
 const CN = ["","一","二","三","四","五","六","七","八","九","十"];
@@ -426,9 +424,9 @@ function visibleKids(d) {
   if (!d.kids.length) return null;
   if (!compact || !foldable(d)) return d.kids;
   const hidden = d.kids.filter(k => !k.direct);
-  if (openFams.has(d.id)) return [...d.kids, {id: "fold-" + d.id, stub: "fold", gen: d.kids[0].gen, fam: d.id, count: hidden.length}];
+  if (openFams.has(d.id)) return [...d.kids, {id: "fold-" + d.id, stub: "fold", gen: d.kids[0].gen, fam: d.id, count: hidden.length, sis: hidden.some(k => k.female)}];
   return [...d.kids.filter(k => k.direct), {id: "stub-" + d.id, stub: "open", gen: d.kids[0].gen, fam: d.id, count: hidden.length,
-    names: hidden.map(k => k.name)}];
+    names: hidden.map(k => k.name), sis: hidden.some(k => k.female)}];
 }
 /* 讓某人可見：展開祖先，並打開他所在的兄弟組 */
 function reveal(id) {
@@ -490,9 +488,9 @@ function draw() {
       const open = d.stub === "open";
       const fam = byId.get(d.fam);
       const t = el("g", {class: "stub", role: "button", tabindex: 0,
-        "aria-label": open ? `顯示${fam.name}其餘 ${d.count} 位子嗣` : `收起${fam.name}其餘 ${d.count} 位子嗣`}, svg);
+        "aria-label": open ? `顯示${fam.name}其餘 ${d.count} 位子女` : `收起${fam.name}其餘 ${d.count} 位子女`}, svg);
       el("rect", {x: x - BW/2, y: yy - 15, width: 132, height: open ? 44 : 30, rx: 8}, t);
-      el("text", {x: x - BW/2 + 12, y: yy + 5}, t).textContent = open ? `＋ 另 ${d.count} 位兄弟` : `－ 收起 ${d.count} 位兄弟`;
+      el("text", {x: x - BW/2 + 12, y: yy + 5}, t).textContent = open ? `＋ 另 ${d.count} 位${d.sis ? "兄弟姊妹" : "兄弟"}` : `－ 收起 ${d.count} 位${d.sis ? "兄弟姊妹" : "兄弟"}`;
       if (open) el("text", {class: "sub2", x: x - BW/2 + 12, y: yy + 22}, t).textContent =
         d.names.slice(0, 3).join("、") + (d.names.length > 3 ? "…" : "");
       const act = () => { open ? openFams.add(d.fam) : openFams.delete(d.fam); saveCompact(); draw(); };
@@ -546,7 +544,7 @@ function showPerson(id) {
     ${[d.l1, d.l2].filter(Boolean).length ? `<p>${[d.l1, d.l2].filter(Boolean).join("・")}</p>` : ""}
     ${d.note ? `<h3>記載</h3><p>${d.note}</p>` : ""}
     ${p ? `<h3>父親</h3><p>${link(p.id)}</p>` : ""}
-    ${d.kids.length ? `<h3>子嗣（${d.kids.length}）</h3><ul>${d.kids.map(k => `<li>${link(k.id)}　<span class="meta">${k.l1 || ""}</span></li>`).join("")}</ul>` : ""}
+    ${d.kids.length ? `<h3>子女（${d.kids.length}）</h3><ul>${d.kids.map(k => `<li>${link(k.id)}　<span class="meta">${k.l1 || ""}</span></li>`).join("")}</ul>` : ""}
     ${d.src ? `<h3>出處</h3><p class="meta">${d.src}</p>` : ""}`;
 }
 function showHome() {
