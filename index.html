@@ -42,10 +42,20 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 .bar input[type=color] { width: 40px; height: 34px; padding: 2px; cursor: pointer; }
 .bar label { font-size: 13px; color: var(--muted); }
 .bar .count { color: var(--muted); font-size: 13px; }
-.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
-.canvas { border: 1px solid var(--rule); border-radius: 8px; overflow: auto; max-height: calc(100vh - 170px); min-height: 420px; }
+.main { position: relative; }
+.canvas { border: 1px solid var(--rule); border-radius: 8px; overflow: auto; height: calc(100vh - 160px); min-height: 460px; }
 .canvas svg { display: block; }
-.panel { background: color-mix(in srgb, var(--bg) 93%, var(--fg) 7%); border-radius: 8px; padding: 16px; min-width: 0; font-size: 14px; }
+.panel { position: absolute; top: 12px; right: 12px; width: 300px; max-height: calc(100% - 24px); overflow: auto; box-sizing: border-box;
+  background: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; font-size: 14px; }
+.panel .close { position: absolute; top: 8px; right: 8px; font: inherit; font-size: 18px; line-height: 1; width: 30px; height: 30px;
+  border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--fg); cursor: pointer; }
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 18px; font-size: 14px; }
+.overview h2 { font-size: 17px; margin: 0 0 6px; }
+.overview .meta { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.overview ol { columns: 2; column-gap: 24px; margin: 0; padding-left: 22px; }
+.overview ul { margin: 0; padding-left: 20px; }
+.overview li { margin: 2px 0; break-inside: avoid; }
+.overview a { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .panel h2 { font-size: 18px; margin: 0 0 4px; }
 .panel h3 { font-size: 14px; margin: 16px 0 6px; }
 .panel p { margin: 0 0 8px; }
@@ -85,8 +95,10 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 .gapnote, .gen { font-size: 12.5px; fill: var(--muted); }
 .genline { stroke: var(--rule); stroke-width: 1; }
 @media (max-width: 760px) {
-  .main { grid-template-columns: minmax(0, 1fr); }
-  .canvas { max-height: 70vh; }
+  .canvas { height: 65vh; }
+  .panel { position: static; width: auto; max-height: none; margin-top: 12px; }
+  .overview { grid-template-columns: minmax(0, 1fr); }
+  .overview ol { columns: 1; }
   .bar input[type=search] { width: 150px; }
 }
 @media (prefers-reduced-motion: no-preference) { .canvas { scroll-behavior: smooth; } }
@@ -94,7 +106,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 
 <header>
   <h1>華美鄉陳氏族譜・世系圖</h1>
-  <p class="sub">廣東省潮陽縣貴嶼華美鄉 · 據馬来亞分譜第一、二頁 · 現收錄 <span id="total"></span> 人</p>
+  <p class="sub">廣東省潮陽縣貴嶼華美鄉 · 據馬来亞分譜第一至四頁 · 現收錄 <span id="total"></span> 人</p>
 </header>
 
 <div class="bar" role="toolbar" aria-label="工具列">
@@ -121,7 +133,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 
 <div class="main">
   <div class="canvas" id="canvas"></div>
-  <aside class="panel" id="panel" aria-live="polite"></aside>
+  <aside class="panel" id="panel" aria-live="polite" hidden></aside>
 </div>
 
 <div class="legend">
@@ -131,6 +143,9 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
   <span><i class="ln"></i>直系傳承</span>
   <span><i class="ln dash"></i>中間世代從略</span>
 </div>
+
+<section class="overview" id="overview"></section>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
@@ -237,8 +252,60 @@ const DATA = [
    note:"輝也公五房。三至六房稱婆房。", src:"第二頁 第26–27行"},
   {id:"fuzhai", gen:19, name:"福斋公", l1:"六房", l2:"婆房", parent:"huiye",
    note:"輝也公六房。三至六房稱婆房。", src:"第二頁 第26–27行"},
-  {id:"deze", gen:20, name:"德者公", l1:"長房", l2:"續下頁", parent:"mingyu",
-   note:"明玉公長房。（「者」字或作「耆」，待核）下文續下頁。", src:"第二頁 第28行"},
+  {id:"deze", gen:20, name:"德者公", l1:"長房", l2:"", parent:"mingyu",
+   note:"明玉公長房。（「者」字或作「耆」，待核）", src:"第二頁 第28行"},
+  {id:"chuang", gen:20, name:"□創公", l1:"二房", l2:"首字待核", parent:"mingyu",
+   note:"明玉公二房。第一字字形不清，或作「開」，待核。原文行首有塗改。", src:"第三頁 第1行"},
+  {id:"nengzhe", gen:20, name:"能者公", l1:"三房", l2:"", parent:"mingyu",
+   note:"明玉公三房。", src:"第三頁 第1行"},
+  {id:"kentang", gen:20, name:"肯堂公", l1:"四房", l2:"壽官", parent:"mingyu", direct:true,
+   note:"明玉公四房。二十世祖，壽官。生五子。", src:"第三頁 第1、3行"},
+  {id:"yangzhe", gen:20, name:"樣者公", l1:"五房", l2:"失嗣", parent:"mingyu",
+   note:"明玉公五房，失嗣。（「樣」字待核）", src:"第三頁 第1–2行"},
+  {id:"mingshan", gen:20, name:"名山公", l1:"六房", l2:"", parent:"mingyu",
+   note:"明玉公六房。", src:"第三頁 第2行"},
+  {id:"guangting", gen:21, name:"光亭公", l1:"長房", l2:"太學生", parent:"kentang", direct:true,
+   note:"肯堂公長房。廿一世祖，太學生。生五子。", src:"第三頁 第3、6行"},
+  {id:"riting", gen:21, name:"日亭公", l1:"二房", l2:"", parent:"kentang",
+   note:"肯堂公二房。", src:"第三頁 第4行"},
+  {id:"yiting", gen:21, name:"宜亭公", l1:"三房", l2:"失嗣", parent:"kentang",
+   note:"肯堂公三房，失嗣。", src:"第三頁 第4行"},
+  {id:"kt4", gen:21, name:"四房", l1:"名字失傳", l2:"失嗣", parent:"kentang", unsure:true,
+   note:"肯堂公四房祖叔，名字失傳，又失嗣。", src:"第三頁 第4–5行"},
+  {id:"pingzhai", gen:21, name:"平斋公", l1:"五房", l2:"", parent:"kentang",
+   note:"肯堂公五房。", src:"第三頁 第5行"},
+  {id:"chaojian", gen:22, name:"朝建公", l1:"長房", l2:"", parent:"guangting",
+   note:"光亭公長房。", src:"第三頁 第6行"},
+  {id:"yunshu", gen:22, name:"芸書公", l1:"二房", l2:"", parent:"guangting",
+   note:"光亭公二房。", src:"第三頁 第7行"},
+  {id:"qianzhai", gen:22, name:"謙斋公", l1:"三房", l2:"", parent:"guangting",
+   note:"光亭公三房。", src:"第三頁 第7行"},
+  {id:"chaofeng", gen:22, name:"朝鳳公", l1:"四房", l2:"", parent:"guangting",
+   note:"光亭公四房。", src:"第三頁 第7行"},
+  {id:"duanxi", gen:22, name:"端溪公", l1:"五房", l2:"太學生", parent:"guangting", direct:true,
+   note:"光亭公五房。廿二世祖，太學生。生四子。", src:"第三頁 第7–9行"},
+  {id:"shengmei", gen:23, name:"盛美公", l1:"長房", l2:"", parent:"duanxi",
+   note:"端溪公長房，號盛美公。（「盛」字待核）", src:"第三頁 第9–10行"},
+  {id:"wenxuan", gen:23, name:"聞軒公", l1:"二房", l2:"失嗣", parent:"duanxi",
+   note:"端溪公二房，失嗣。", src:"第三頁 第10行"},
+  {id:"lunxuan", gen:23, name:"倫軒公", l1:"三房", l2:"失嗣", parent:"duanxi",
+   note:"端溪公三房，失嗣。", src:"第三頁 第10行"},
+  {id:"pingzhang", gen:23, name:"平章公", l1:"四房", l2:"修職郎", parent:"duanxi", direct:true,
+   note:"端溪公四房。廿三世祖，修職郎。生七子。自此六房頭甚多遷來馬來亞。平章公派下另有世系圖。", src:"第三頁 第10–16行"},
+  {id:"ruohao", gen:24, name:"若豪公", l1:"長房", l2:"", parent:"pingzhang",
+   note:"平章公長房，號若豪公。", src:"第三頁 第12–13行"},
+  {id:"ziying", gen:24, name:"子英公", l1:"二房", l2:"", parent:"pingzhang",
+   note:"平章公二房，號子英公。", src:"第三頁 第13行"},
+  {id:"ziting", gen:24, name:"子庭公", l1:"三房", l2:"", parent:"pingzhang",
+   note:"平章公三房，號子庭公。", src:"第三頁 第13行"},
+  {id:"ziyun", gen:24, name:"子雲公", l1:"四房", l2:"", parent:"pingzhang",
+   note:"平章公四房，號子雲公。", src:"第三頁 第13–14行"},
+  {id:"zibin", gen:24, name:"子彬公", l1:"五房", l2:"", parent:"pingzhang",
+   note:"平章公五房。", src:"第三頁 第14行"},
+  {id:"zhongfeng", gen:24, name:"中峰公", l1:"六房", l2:"", parent:"pingzhang",
+   note:"平章公六房。", src:"第三頁 第14行"},
+  {id:"shizhai", gen:24, name:"石斋公", l1:"七房", l2:"失嗣", parent:"pingzhang",
+   note:"平章公七房，號石斋公，失嗣。", src:"第三頁 第14–15行"},
 ];
 const NOTES = [
   "始祖以下七代人丁單薄，世系未詳。",
@@ -250,7 +317,11 @@ const NOTES = [
   "養泉公長至四房遷居福建；五至八房派孫住本鄉。",
   "七峯公有兩房遷居潮安、潮陽縣城。",
   "十九世明玉公一支俗稱後厝派，德斋公一支俗稱前厝派。",
-  "二十世以下，續族譜第三頁。"
+  "廿三世平章公生七子，其中六房後人多遷來馬來亞。",
+  "松軒公一派遷居金甌鄉；另有派孫遷居東山及澄海冠隴鄉。",
+  "明末清初，族人多漂泊暹羅、安南，馬來亞次之。",
+  "在馬來亞，梅圃祖派孫頗多，樵隱祖派孫較少。",
+  "平章公派下另有世系圖，待轉錄。"
 ];
 
 const CN = ["","一","二","三","四","五","六","七","八","九","十"];
@@ -349,8 +420,10 @@ function link(id) { const d = byId.get(id); return `<a data-id="${id}">${d.name}
 function showPerson(id) {
   const d = byId.get(id), p = d.parent && byId.get(d.parent);
   const kind = d.direct ? "本支直系" : "旁支";
-  document.getElementById("panel").innerHTML = `
-    <p class="back"><a id="home">← 返回總覽</a></p>
+  const panel = document.getElementById("panel");
+  panel.hidden = false;
+  panel.innerHTML = `
+    <button class="close" id="home" aria-label="關閉">×</button>
     <h2>${d.name}</h2>
     <p class="meta">${genName(d.gen)} · ${kind}${d.unsure ? " · 無從查考" : ""}</p>
     ${[d.l1, d.l2].filter(Boolean).length ? `<p>${[d.l1, d.l2].filter(Boolean).join("・")}</p>` : ""}
@@ -361,20 +434,23 @@ function showPerson(id) {
 }
 function showHome() {
   const line = DATA.filter(d => d.direct).sort((a, b) => a.gen - b.gen);
-  document.getElementById("panel").innerHTML = `
-    <h2>本支直系</h2>
+  document.getElementById("overview").innerHTML = `
+    <div><h2>本支直系</h2>
     <p class="meta">點擊圖中任何人，可看記載與出處。</p>
-    <ol>${line.map(d => `<li>${genName(d.gen)}　${link(d.id)}${d.unsure ? "（待查）" : ""}</li>`).join("")}</ol>
-    <h3>要點</h3>
-    <ul>${NOTES.map(n => `<li>${n}</li>`).join("")}</ul>`;
+    <ol>${line.map(d => `<li>${genName(d.gen)}　${link(d.id)}</li>`).join("")}</ol></div>
+    <div><h2>要點</h2>
+    <ul>${NOTES.map(n => `<li>${n}</li>`).join("")}</ul></div>`;
 }
-document.getElementById("panel").addEventListener("click", e => {
+function onLink(e) {
+  if (e.target.closest("#home")) { selected = null; document.getElementById("panel").hidden = true; draw(); return; }
   const a = e.target.closest("a"); if (!a) return;
-  if (a.id === "home") { selected = null; draw(); showHome(); return; }
   const id = a.dataset.id; if (!id) return;
   let q = byId.get(id); while (q && q.parent) { collapsed.delete(q.parent); q = byId.get(q.parent); }
   selected = id; draw(); showPerson(id); scrollTo(id);
-});
+}
+document.getElementById("panel").addEventListener("click", onLink);
+document.getElementById("overview").addEventListener("click", onLink);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("panel").hidden) onLink({target: document.getElementById("home")}); });
 
 function scrollTo(id) {
   requestAnimationFrame(() => {
