@@ -127,6 +127,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
   <button id="fit">適合畫面</button>
   <button id="compact" aria-pressed="true">精簡旁支：開</button>
   <button id="openall">全部展開</button>
+  <button id="vert" aria-pressed="false">縱向排列</button>
   <button id="direct">只看直系</button>
   <label for="bgsel">背景</label>
   <select id="bgsel">
@@ -421,6 +422,8 @@ let collapsed = new Set();
 try { const s = JSON.parse(localStorage.getItem("hm-collapsed") || "[]"); collapsed = new Set(s.filter(id => byId.has(id))); } catch(e) {}
 const saveCollapsed = () => { try { localStorage.setItem("hm-collapsed", JSON.stringify([...collapsed])); } catch(e) {} };
 let selected = null, query = "", scale = 1;
+let vertical = false;
+try { vertical = localStorage.getItem("hm-vert") === "1"; } catch(e) {}
 /* 精簡旁支：同一父親子嗣超過 FOLD_MIN 人時，只顯示直系一人，其餘兄弟收成一個「另 N 位」 */
 const FOLD_MIN = 4;
 let compact = true, openFams = new Set();
@@ -451,45 +454,7 @@ const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(ns,
 const countDesc = d => d.kids.reduce((n, k) => n + 1 + countDesc(k), 0);
 const matches = d => query && (d.name + d.l1 + d.l2 + (d.note || "")).includes(query);
 
-function draw() {
-  const h = d3.hierarchy(fakeRoot, d => d.id === "__root" ? d.kids : (d.stub || collapsed.has(d.id)) ? null : visibleKids(d));
-  d3.tree().nodeSize([SLOT, 1]).separation(() => 1)(h);
-  const nodes = h.descendants().filter(n => n.data.id !== "__root");
-  const gens = [...new Set(nodes.map(n => n.data.gen))].sort((a, b) => a - b);
-  const gy = new Map(); let y = TOP + 20;
-  gens.forEach((g, i) => { if (i) y += (g - gens[i-1] > 1) ? ROW + GAPROW : ROW; gy.set(g, y); });
-  const minX = d3.min(nodes, n => n.x), maxX = d3.max(nodes, n => n.x);
-  const ox = LEFT + 30 - minX;
-  const W = maxX - minX + LEFT + 30 + 150, H = y + 70;
-  const X = n => n.x + ox, Y = n => gy.get(n.data.gen);
-
-  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, width: W * scale, height: H * scale,
-    role: "img", "aria-label": "華美鄉陳氏世系圖"});
-  svg.dataset.w = W; svg.dataset.h = H;
-  gens.forEach(g => el("line", {class: "genline", x1: 0, x2: W, y1: gy.get(g) - 44, y2: gy.get(g) - 44}, svg));
-
-  const cg = el("g", {}, svg), dg = el("g", {}, svg);
-  nodes.forEach(p => {
-    if (!p.children) return;
-    const px = X(p), py0 = Y(p) + BH / 2;
-    const groups = p.children;
-    const gc = groups[0].data.gen, gp = p.data.gen;
-    if (gc - gp > 1) {
-      groups.forEach(c => {
-        el("path", {class: "gap", d: `M${px} ${py0}V${Y(c) - BH/2}`}, cg);
-        el("text", {class: "gapnote", x: px + 14, y: (py0 + Y(c)) / 2}, cg).textContent =
-          `二至${genName(gc - 1)}：資料待補`;
-      });
-      return;
-    }
-    const bus = Y(groups[0]) - BH / 2 - 22;
-    const xs = groups.map(X);
-    el("path", {class: "conn", d: `M${px} ${py0 + 14}V${bus}M${Math.min(px, ...xs)} ${bus}H${Math.max(px, ...xs)}` +
-      xs.map(x => `M${x} ${bus}V${Y(groups[0]) - BH/2}`).join("")}, cg);
-    groups.forEach(c => { if (p.data.direct && c.data.direct)
-      el("path", {class: "conn direct", d: `M${px} ${py0}V${bus}H${X(c)}V${Y(c) - BH/2}`}, dg); });
-  });
-
+function drawNodes(svg, nodes, X, Y) {
   nodes.forEach(n => {
     const d = n.data, x = X(n), yy = Y(n);
     if (d.stub) {
@@ -529,11 +494,92 @@ function draw() {
       t.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } });
     }
   });
+}
+
+function draw() {
+  if (vertical) return drawVertical();
+  const h = d3.hierarchy(fakeRoot, d => d.id === "__root" ? d.kids : (d.stub || collapsed.has(d.id)) ? null : visibleKids(d));
+  d3.tree().nodeSize([SLOT, 1]).separation(() => 1)(h);
+  const nodes = h.descendants().filter(n => n.data.id !== "__root");
+  const gens = [...new Set(nodes.map(n => n.data.gen))].sort((a, b) => a - b);
+  const gy = new Map(); let y = TOP + 20;
+  gens.forEach((g, i) => { if (i) y += (g - gens[i-1] > 1) ? ROW + GAPROW : ROW; gy.set(g, y); });
+  const minX = d3.min(nodes, n => n.x), maxX = d3.max(nodes, n => n.x);
+  const ox = LEFT + 30 - minX;
+  const W = maxX - minX + LEFT + 30 + 150, H = y + 70;
+  const X = n => n.x + ox, Y = n => gy.get(n.data.gen);
+
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, width: W * scale, height: H * scale,
+    role: "img", "aria-label": "華美鄉陳氏世系圖"});
+  svg.dataset.w = W; svg.dataset.h = H;
+  gens.forEach(g => el("line", {class: "genline", x1: 0, x2: W, y1: gy.get(g) - 44, y2: gy.get(g) - 44}, svg));
+
+  const cg = el("g", {}, svg), dg = el("g", {}, svg);
+  nodes.forEach(p => {
+    if (!p.children) return;
+    const px = X(p), py0 = Y(p) + BH / 2;
+    const groups = p.children;
+    const gc = groups[0].data.gen, gp = p.data.gen;
+    if (gc - gp > 1) {
+      groups.forEach(c => {
+        el("path", {class: "gap", d: `M${px} ${py0}V${Y(c) - BH/2}`}, cg);
+        el("text", {class: "gapnote", x: px + 14, y: (py0 + Y(c)) / 2}, cg).textContent =
+          `二至${genName(gc - 1)}：資料待補`;
+      });
+      return;
+    }
+    const bus = Y(groups[0]) - BH / 2 - 22;
+    const xs = groups.map(X);
+    el("path", {class: "conn", d: `M${px} ${py0 + 14}V${bus}M${Math.min(px, ...xs)} ${bus}H${Math.max(px, ...xs)}` +
+      xs.map(x => `M${x} ${bus}V${Y(groups[0]) - BH/2}`).join("")}, cg);
+    groups.forEach(c => { if (p.data.direct && c.data.direct)
+      el("path", {class: "conn direct", d: `M${px} ${py0}V${bus}H${X(c)}V${Y(c) - BH/2}`}, dg); });
+  });
+
+  drawNodes(svg, nodes, X, Y);
   // 世代標籤：固定在左邊，橫向捲動時跟着移動
   const genG = el("g", {class: "gencol"}, svg);
   el("rect", {class: "genbg", x: 0, y: 0, width: 62, height: H}, genG);
   gens.forEach(g => { el("text", {class: "gen", x: 10, y: gy.get(g) + 4}, genG).textContent = genName(g); });
   const pin = () => genG.setAttribute("transform", `translate(${canvas.scrollLeft / scale},0)`);
+  canvas.onscroll = pin;
+  canvas.replaceChildren(svg); pin();
+  document.getElementById("zlab").textContent = Math.round(scale * 100) + "%";
+}
+
+/* 縱向排列：每人一行，兄弟上下排，世代向右縮進。孩子多時不會太闊。 */
+const RH = 54, IND = 40, HEAD = 34;
+function drawVertical() {
+  const h = d3.hierarchy(fakeRoot, d => d.id === "__root" ? d.kids : (d.stub || collapsed.has(d.id)) ? null : visibleKids(d));
+  const nodes = [];
+  h.eachBefore(n => { if (n.data.id !== "__root") nodes.push(n); });
+  const minG = d3.min(nodes, n => n.data.gen), maxG = d3.max(nodes, n => n.data.gen);
+  nodes.forEach((n, i) => { n.vy = HEAD + 30 + i * RH; });
+  const X = n => 30 + (n.data.gen - minG) * IND, Y = n => n.vy;
+  const W = 30 + (maxG - minG) * IND + 260, H = HEAD + 30 + nodes.length * RH + 20;
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, width: W * scale, height: H * scale,
+    role: "img", "aria-label": "華美鄉陳氏世系圖（縱向）"});
+  svg.dataset.w = W; svg.dataset.h = H;
+  const cg = el("g", {}, svg), dg = el("g", {}, svg);
+  nodes.forEach(p => {
+    if (!p.children) return;
+    const px = X(p), py0 = Y(p) + BH / 2, last = p.children[p.children.length - 1];
+    const gapped = p.children[0].data.gen - p.data.gen > 1;
+    el("path", {class: gapped ? "gap" : "conn", d: `M${px} ${py0}V${Y(last)}` +
+      p.children.map(c => `M${px} ${Y(c)}H${X(c) - BW/2}`).join("")}, cg);
+    p.children.forEach(c => { if (p.data.direct && c.data.direct)
+      el("path", {class: "conn direct", d: `M${px} ${py0}V${Y(c)}H${X(c) - BW/2}`}, dg); });
+  });
+  drawNodes(svg, nodes, X, Y);
+  // 世代標籤：固定在上面，直向捲動時跟着移動
+  const genG = el("g", {class: "gencol"}, svg);
+  el("rect", {class: "genbg", x: 0, y: 0, width: W, height: HEAD, "fill-opacity": 1}, genG);
+  el("line", {class: "genline", x1: 0, x2: W, y1: HEAD, y2: HEAD}, genG);
+  for (let g = minG; g <= maxG; g++) {
+    if ((g - minG) % 2 && maxG - minG > 12) continue;  // 世代多時隔一個標示，免得擠在一起
+    el("text", {class: "gen", x: 30 + (g - minG) * IND - BW/2, y: 22}, genG).textContent = genName(g);
+  }
+  const pin = () => genG.setAttribute("transform", `translate(0,${canvas.scrollTop / scale})`);
   canvas.onscroll = pin;
   canvas.replaceChildren(svg); pin();
   document.getElementById("zlab").textContent = Math.round(scale * 100) + "%";
@@ -599,6 +645,14 @@ function setCompact(on) {
   saveCompact();
 }
 document.getElementById("compact").onclick = () => { setCompact(!compact); draw(); };
+function setVert(on) {
+  vertical = on;
+  const b = document.getElementById("vert");
+  b.setAttribute("aria-pressed", on ? "true" : "false"); b.textContent = on ? "縱向排列：開" : "縱向排列：關";
+  try { localStorage.setItem("hm-vert", on ? "1" : "0"); } catch(e) {}
+}
+document.getElementById("vert").onclick = () => { setVert(!vertical); setScale(1); canvas.scrollTop = 0; };
+setVert(vertical);
 document.getElementById("openall").onclick = () => { collapsed.clear(); saveCollapsed(); setCompact(false); draw(); };
 document.getElementById("direct").onclick = () => {
   collapsed = new Set(); DATA.forEach(d => { if (!d.direct && byId.get(d.id).kids.length) collapsed.add(d.id); });
