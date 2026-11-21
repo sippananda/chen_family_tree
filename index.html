@@ -57,6 +57,7 @@ h1 { font-size: 22px; margin: 0; font-weight: 700; text-wrap: balance; }
 .overview li { margin: 2px 0; break-inside: avoid; }
 .overview a { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .panel h2 { font-size: 18px; margin: 0 0 4px; }
+.panel .photo { display: block; width: 100%; max-width: 200px; height: auto; border-radius: 6px; margin: 6px 0 8px; }
 .panel h3 { font-size: 14px; margin: 16px 0 6px; }
 .panel p { margin: 0 0 8px; }
 .panel .meta { color: var(--muted); font-size: 13px; }
@@ -548,6 +549,7 @@ function showPerson(id) {
   panel.innerHTML = `
     <button class="close" id="home" aria-label="關閉">×</button>
     <h2>${d.name}</h2>
+    ${d.photo ? `<img class="photo" src="${d.photo}" alt="${d.name}照片">` : ""}
     <p class="meta">${[genName(d.gen), kind, d.unsure ? "無從查考" : ""].filter(Boolean).join(" · ")}</p>
     ${[d.l1, d.l2].filter(Boolean).length ? `<p>${[d.l1, d.l2].filter(Boolean).join("・")}</p>` : ""}
     ${d.note ? `<h3>記載</h3><p>${d.note.replace(/【\/?私】/g, "").replace(/\n/g, "<br>")}</p>` : ""}
